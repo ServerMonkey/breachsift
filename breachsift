@@ -1,0 +1,52 @@
+#!/bin/sh
+#info: Search through BreachCompilation data
+
+# help
+if [ -z "$1" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+	man breachsift.1 || ronn -r <README.md | man -l -
+	exit 0
+fi
+
+if [ -z "$(command -v sift)" ]; then
+	echo "sift is not installed. Install to make this program work."
+	exit 1
+fi
+
+SEARCH_STRING="$1"
+FOLDER_WITH_DATA="$2"
+OUT_FILE="$3"
+
+if [ -z "$SEARCH_STRING" ]; then
+	echo "SEARCH_STRING is unset or empty"
+fi
+if [ -z "$FOLDER_WITH_DATA" ]; then
+	echo "FOLDER_WITH_DATA or empty"
+fi
+if [ -z "$OUT_FILE" ]; then
+	echo "OUT_FILE is unset or empty"
+fi
+
+OUT_TMP=$(mktemp)
+
+TIME_START=$(date +%s)
+
+sift \
+	--follow \
+	--ignore-case \
+	--err-skip-line-length \
+	--no-filename \
+	--binary-skip \
+	--exclude-dirs=lost+found \
+	"$SEARCH_STRING" \
+	"$FOLDER_WITH_DATA" \
+	--output="$OUT_FILE" || exit 1
+
+# sort and remove duplicates
+sort "$OUT_FILE" | uniq -u >"$OUT_TMP"
+rm "$OUT_FILE"
+mv "$OUT_TMP" "$OUT_FILE"
+
+# result
+TIME_END=$(date +%s)
+printf "Search time: "
+echo $((TIME_END - TIME_START)) | awk '{print int($1/60)":"int($1%60)}'
